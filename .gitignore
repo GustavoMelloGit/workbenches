@@ -1,0 +1,15 @@
+# NUNCA commitar — contém chaves públicas específicas de cada máquina
+.env
+workbenches/*/.env
+
+# Backups gerados pelo reset.sh
+*-backup-*.tar.gz
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp

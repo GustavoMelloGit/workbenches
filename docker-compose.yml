@@ -1,0 +1,17 @@
+services:
+  devenv:
+    build:
+      context: .
+      args:
+        AUTHORIZED_KEY: "${AUTHORIZED_KEY}"
+    container_name: ${INSTANCE_NAME:-devenv}
+    hostname: ${INSTANCE_NAME:-devenv}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${SSH_PORT:-2222}:22"
+    volumes:
+      - dev-home:/home/dev
+
+volumes:
+  dev-home:
+    name: ${INSTANCE_NAME:-devenv}_dev-home
