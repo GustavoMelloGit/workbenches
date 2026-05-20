@@ -78,9 +78,9 @@ RUN git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git
 
 USER root
 
-# Custom zshrc — replaces the one created by oh-my-zsh
-COPY config/zshrc /home/${USERNAME}/.zshrc
-RUN chown ${USERNAME}:${USERNAME} /home/${USERNAME}/.zshrc
+# Store zshrc template outside the volume so entrypoint can apply it at runtime.
+# /home/dev is a mounted volume — files copied there in the image are hidden by it.
+COPY config/zshrc /etc/workbench/zshrc
 
 # --- Postgres data dir owned by dev (lives inside the dev-home volume) -----
 # We DO NOT initdb here — the entrypoint does it on first run so the cluster

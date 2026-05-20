@@ -41,6 +41,13 @@ else
   echo "[entrypoint] Cluster Postgres já existe em $PGDATA, reaproveitando."
 fi
 
+# --- zshrc: aplica template se o .zshrc ainda não tem nossas customizações ---
+if ! grep -q 'zsh-autosuggestions' /home/dev/.zshrc 2>/dev/null; then
+  echo "[entrypoint] Aplicando zshrc customizado..."
+  cp /etc/workbench/zshrc /home/dev/.zshrc
+  chown dev:dev /home/dev/.zshrc
+fi
+
 # --- Redis: ensure data dir exists ------------------------------------------
 mkdir -p "$REDIS_DIR"
 chown -R dev:dev "$REDIS_DIR"
