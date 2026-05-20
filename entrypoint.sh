@@ -31,7 +31,7 @@ if [ ! -s "$PGDATA/PG_VERSION" ]; then
   # Tuning leve pra dev
   cat >> "$PGDATA/postgresql.conf" <<'EOF'
 
-# devenv tuning
+# workbench tuning
 listen_addresses = 'localhost'
 port = 5432
 EOF

@@ -57,7 +57,7 @@ if [ "$KEEP_VOLUME" = false ]; then
 else
   echo -e "  • ${YELLOW}Volume PRESERVADO${NC} (--keep-volume)"
 fi
-echo "  • Imagem do devenv"
+echo "  • Imagem da workbench"
 echo "  • ~/.ssh/${INSTANCE_NAME} e ~/.ssh/${INSTANCE_NAME}.pub"
 echo "  • Bloco 'Host ${INSTANCE_NAME}' do ~/.ssh/config"
 echo "  • workbenches/${INSTANCE_NAME}/.env"

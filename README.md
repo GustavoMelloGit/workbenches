@@ -1,8 +1,11 @@
-# Devenv — ambiente de desenvolvimento isolado e portátil
+# Workbenches — ambientes de desenvolvimento isolados e portáteis
 
-Um único container que tem **tudo** que você precisa pra desenvolver:
-Node, Postgres 16, Redis, git, gh, zsh. Você se conecta via Zed por SSH,
-trabalha como num computador Linux dedicado — e nada toca o seu Mac.
+Cada workbench é um container Linux completo com Node, Postgres 16, Redis,
+git, gh e zsh. Você se conecta via Zed por SSH e trabalha como num
+computador dedicado — nada toca o seu Mac.
+
+Um único repositório cria quantas workbenches quiser, cada uma com seu
+próprio container, banco e volume isolados.
 
 ---
 
@@ -15,7 +18,7 @@ trabalha como num computador Linux dedicado — e nada toca o seu Mac.
 │  Zed ──SSH──┐                           │
 │             ▼                           │
 │  ┌───────────────────────────────────┐  │
-│  │ devenv (container)                │  │
+│  │ <nome> (workbench)                │  │
 │  │   • código dos projetos           │  │
 │  │   • Node, git, gh                 │  │
 │  │   • Postgres @ localhost:5432     │  │
@@ -34,28 +37,42 @@ compartilhada, sem composes paralelos. Isolamento real.
 Pré-requisitos: Docker Desktop instalado e rodando.
 
 ```bash
-git clone git@github.com:voce/devenv.git ~/devenv
-cd ~/devenv
+git clone git@github.com:GustavoMelloGit/workbenches.git ~/workbenches
+cd ~/workbenches
 chmod +x bootstrap.sh
 ./bootstrap.sh
+# → Nome da workbench: work
 ```
 
 O `bootstrap.sh`:
 
-1. Gera chave SSH dedicada (`~/.ssh/devenv`).
-2. Cria `.env` com a chave pública.
-3. Adiciona bloco `Host devenv` ao `~/.ssh/config`.
-4. Builda a imagem (~5–7 min na 1ª vez).
-5. Sobe o container, aguarda SSH e Postgres ficarem prontos.
+1. Pergunta o nome da workbench.
+2. Gera chave SSH dedicada (`~/.ssh/<nome>`).
+3. Cria `workbenches/<nome>/.env` com a chave pública e a porta alocada.
+4. Adiciona bloco `Host <nome>` ao `~/.ssh/config`.
+5. Builda a imagem (~5–7 min na 1ª vez).
+6. Sobe o container, aguarda SSH e Postgres ficarem prontos.
 
-No fim, conecta o Zed: **File → Open Remote Project → Add Server → `devenv`**.
+No fim, conecta o Zed: **File → Open Remote Project → Add Server → `<nome>`**.
+
+---
+
+## Criando mais workbenches
+
+```bash
+./bootstrap.sh
+# → Nome da workbench: personal
+```
+
+Cada workbench recebe porta SSH única (2222, 2223, ...) detectada
+automaticamente. Todas rodam em paralelo sem conflito.
 
 ---
 
 ## Trabalhando num projeto
 
 ```bash
-ssh devenv
+ssh <nome>
 mkdir -p ~/projects && cd ~/projects
 git clone git@github.com:Taya/credit-card.git
 cd credit-card
@@ -84,7 +101,7 @@ sem mexer no docker-compose do projeto.
 
 ---
 
-## O que tem no container
+## O que tem em cada workbench
 
 | Ferramenta | Versão | Como acessar |
 |---|---|---|
@@ -96,8 +113,7 @@ sem mexer no docker-compose do projeto.
 
 ### Postgres — atalhos úteis
 
-O usuário superuser é `dev` (mesmo nome do usuário do container), sem senha,
-porque é dev local em ambiente isolado.
+O usuário superuser é `dev`, sem senha (dev local em ambiente isolado).
 
 ```bash
 createdb meu_projeto                       # criar banco
@@ -150,22 +166,19 @@ O DBeaver chega lá via túnel SSH, sem precisar abrir nenhuma porta extra.
    |---|---|
    | Use SSH Tunnel | ✅ |
    | Host/IP | `127.0.0.1` |
-   | Port | `2222` |
+   | Port | porta da workbench (ver `workbenches/<nome>/.env`) |
    | User Name | `dev` |
    | Authentication | Public Key |
-   | Private Key | `~/.ssh/devenv` |
+   | Private Key | `~/.ssh/<nome>` (caminho absoluto, sem `~`) |
 
 4. **Test Connection** → deve conectar.
-
-A mesma configuração funciona pra qualquer banco criado no devenv —
-só muda o campo **Database** na aba Main.
 
 ---
 
 ## Credenciais e git
 
-O bootstrap configura `ForwardAgent yes` no seu `~/.ssh/config`. Isso
-encaminha o `ssh-agent` do Mac pro container — o git do devenv usa as
+O bootstrap configura `ForwardAgent yes` no `~/.ssh/config`. Isso
+encaminha o `ssh-agent` do Mac pro container — o git da workbench usa as
 chaves do Mac (via 1Password, ssh-agent) **sem que elas nunca toquem o
 disco do container**.
 
@@ -173,9 +186,9 @@ Pré-requisito: suas chaves no Mac estão carregadas no agent (`ssh-add -l`
 deve listar algo; com 1Password é automático se você ativar o SSH agent
 nas preferências dele).
 
-Configurar identidade do git (uma vez):
+Configurar identidade do git (uma vez por workbench):
 ```bash
-ssh devenv
+ssh <nome>
 git config --global user.name  "Seu Nome"
 git config --global user.email "voce@empresa.com"
 gh auth login   # opcional, login OAuth no GitHub
@@ -183,83 +196,75 @@ gh auth login   # opcional, login OAuth no GitHub
 
 ---
 
-## Reset (testar do zero)
-
-O `reset.sh` apaga tudo — container, imagem, volume, chave SSH, `.env` — pra
-simular um Mac novo. Útil pra testar se o `bootstrap.sh` ainda funciona do zero.
+## Reset de uma workbench
 
 ```bash
-# Apaga tudo, mas faz backup do volume antes
-./scripts/reset.sh --backup
+# Remove tudo da workbench (container, volume, chave SSH)
+./scripts/reset.sh <nome>
 
-# Apaga tudo MENOS o volume (mantém projetos e bancos)
-# Útil pra testar mudanças no Dockerfile sem perder trabalho
-./scripts/reset.sh --keep-volume
+# Faz backup do volume antes de apagar
+./scripts/reset.sh <nome> --backup
 
-# Pula a confirmação (pra uso em outros scripts)
-./scripts/reset.sh --yes
+# Mantém o volume (projetos e bancos) — útil pra testar o Dockerfile
+./scripts/reset.sh <nome> --keep-volume
 
-# Combina: backup + sem confirmação
-./scripts/reset.sh --backup --yes
-
-# Ajuda
-./scripts/reset.sh --help
+# Sem confirmação interativa
+./scripts/reset.sh <nome> --yes
 ```
 
-> Por padrão o script pede que você digite `reset` pra confirmar antes de
-> apagar qualquer coisa.
+> Por padrão pede que você digite `reset` para confirmar.
 
 ---
 
 ## Operação do dia a dia
 
-Substitua `<nome>` pelo nome da workbench (o valor de `INSTANCE_NAME` no `.env`).
+Substitua `<nome>` pelo nome da workbench.
 
-| Ação | Comando (no Mac, na pasta do devenv) |
+| Ação | Comando (no Mac, na pasta do projeto) |
 |---|---|
-| Setup inicial / nova workbench | `./bootstrap.sh` |
-| Subir | `docker compose --project-name <nome> up -d` |
-| Parar | `docker compose --project-name <nome> stop` |
+| Nova workbench / subir existente | `./bootstrap.sh` |
+| Subir | `docker compose --project-name <nome> --env-file workbenches/<nome>/.env up -d` |
+| Parar | `docker compose --project-name <nome> --env-file workbenches/<nome>/.env stop` |
 | Shell | `ssh <nome>` |
-| Logs | `docker compose --project-name <nome> logs -f` |
+| Logs | `docker compose --project-name <nome> --env-file workbenches/<nome>/.env logs -f` |
 | Status dos serviços internos | `ssh <nome> 'sudo supervisorctl status'` |
 | Reiniciar Postgres | `ssh <nome> 'sudo supervisorctl restart postgres'` |
 | Reiniciar Redis | `ssh <nome> 'sudo supervisorctl restart redis'` |
-| Rebuildar imagem | `docker compose --project-name <nome> build --no-cache` |
-| Reset total | `./scripts/reset.sh` |
-| Reset total c/ backup | `./scripts/reset.sh --backup` |
+| Rebuildar imagem | `docker compose --project-name <nome> --env-file workbenches/<nome>/.env build --no-cache` |
+| Reset | `./scripts/reset.sh <nome>` |
+| Reset c/ backup | `./scripts/reset.sh <nome> --backup` |
 
 ---
 
 ## Backup e portabilidade
 
-Tudo importante mora no volume `devenv_dev-home` (projetos, dotfiles,
+Cada workbench tem seu volume `<nome>_dev-home` (projetos, dotfiles,
 configs, **dados do Postgres e Redis**). Pra fazer backup:
 
 ```bash
 docker run --rm \
-  -v devenv_dev-home:/data \
+  -v <nome>_dev-home:/data \
   -v "$PWD":/backup \
-  alpine tar czf /backup/devenv-home-$(date +%Y%m%d).tar.gz -C /data .
+  alpine tar czf /backup/<nome>-backup-$(date +%Y%m%d).tar.gz -C /data .
 ```
 
-Pra restaurar num Mac novo, depois do `bootstrap.sh`:
+Pra restaurar numa workbench recém-criada:
 
 ```bash
-# Para o container pra não corromper o cluster Postgres durante restore
-docker compose stop
+# Para o container
+docker compose --project-name <nome> --env-file workbenches/<nome>/.env stop
 
 # Restaura
 docker run --rm \
-  -v devenv_dev-home:/data \
+  -v <nome>_dev-home:/data \
   -v "$PWD":/backup \
-  alpine sh -c "cd /data && tar xzf /backup/devenv-home-XXXXXXXX.tar.gz"
+  alpine sh -c "cd /data && tar xzf /backup/<nome>-backup-XXXXXXXX.tar.gz"
 
 # Sobe de novo
-docker compose start
+docker compose --project-name <nome> --env-file workbenches/<nome>/.env start
 ```
 
-Pra projetos individuais, costuma ser mais limpo só:
+Pra projetos individuais, costuma ser mais limpo:
 - `git push` antes de migrar (código vai pro repositório);
 - `pg_dump` dos bancos que importam (vai pra um SQL versionável);
 
@@ -273,8 +278,8 @@ E recriar do zero no Mac novo, em vez de transportar o volume inteiro.
 |---|---|
 | Credenciais do trabalho não vazam pro Mac | Tudo vive no volume isolado |
 | Chaves SSH privadas nunca tocam o container | `ForwardAgent yes` no SSH |
-| Banco/cache de um Mac não vão pra outro | Volume é local, você decide o que migrar |
-| SSH do container não vaza na rede local | Porta 2222 bindada em `127.0.0.1` |
+| Banco/cache de uma workbench não vão pra outra | Volume é por workbench |
+| SSH do container não vaza na rede local | Porta bindada em `127.0.0.1` |
 | Sem login por senha no SSH | Só chave pública, sem root |
 | Sem acesso ao Docker do Mac | Socket NÃO está montado |
 | Postgres/Redis não expostos | Bindados em `127.0.0.1` dentro do container |
@@ -284,13 +289,10 @@ E recriar do zero no Mac novo, em vez de transportar o volume inteiro.
 ## Limitações conhecidas
 
 - **Versões de banco fixas.** O container tem Postgres 16. Se um projeto
-  exige Postgres 14 especificamente (por causa de extensão, sintaxe, etc.),
-  você teria que adaptar. Pra maioria absoluta dos projetos, 16 funciona.
-- **Bancos compartilham a mesma instância.** Cada projeto cria seu próprio
-  *database* (`taya_credit_card`, `taya_billing`, etc.), o que é normal.
-  Eles não enxergam dados uns dos outros, mas compartilham configuração
-  (memória, conexões máximas, etc.).
+  exige Postgres 14 especificamente, você teria que adaptar o Dockerfile.
+- **Bancos compartilham a mesma instância dentro da workbench.** Cada
+  projeto cria seu próprio *database*, o que é normal. Eles não enxergam
+  dados uns dos outros, mas compartilham configuração (memória, conexões).
 - **Não é fronteira de segurança equivalente a uma VM.** Containers no
-  Docker Desktop compartilham o kernel da VM do Docker Desktop. É
-  isolamento muito forte pra deps e credenciais, mas pra rodar código
-  hostil de terceiros, use uma VM dedicada.
+  Docker Desktop compartilham o kernel da VM do Docker Desktop. Pra rodar
+  código hostil de terceiros, use uma VM dedicada.
