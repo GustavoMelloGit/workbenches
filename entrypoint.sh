@@ -41,6 +41,21 @@ else
   echo "[entrypoint] Cluster Postgres já existe em $PGDATA, reaproveitando."
 fi
 
+# --- zsh plugins: clona se não existirem no volume --------------------------
+ZSH_CUSTOM="/home/dev/.oh-my-zsh/custom"
+if [ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ]; then
+  echo "[entrypoint] Instalando zsh-syntax-highlighting..."
+  sudo -u dev git clone --depth=1 \
+    https://github.com/zsh-users/zsh-syntax-highlighting.git \
+    "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
+fi
+if [ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ]; then
+  echo "[entrypoint] Instalando zsh-autosuggestions..."
+  sudo -u dev git clone --depth=1 \
+    https://github.com/zsh-users/zsh-autosuggestions.git \
+    "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
+fi
+
 # --- zshrc: aplica template se o .zshrc ainda não tem nossas customizações ---
 if ! grep -q 'zsh-autosuggestions' /home/dev/.zshrc 2>/dev/null; then
   echo "[entrypoint] Aplicando zshrc customizado..."
