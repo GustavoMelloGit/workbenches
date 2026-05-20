@@ -67,24 +67,20 @@ RUN mkdir -p ${NVM_DIR} \
  && nvm alias default 'lts/*' \
  && npm install -g pnpm yarn
 
-# Oh My Zsh first — its installer overwrites ~/.zshrc.
+# Oh My Zsh — installer overwrites ~/.zshrc, so plugins and zshrc come after.
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
-# Append nvm + handy aliases AFTER oh-my-zsh ran.
-RUN cat >> /home/${USERNAME}/.zshrc <<'EOF'
-
-# nvm
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-
-# Postgres helpers (databases vivem em /home/dev/.pgdata via PGDATA in supervisord.conf)
-export PGHOST=localhost
-export PGPORT=5432
-export PGUSER=dev
-EOF
+# zsh plugins (must be cloned into oh-my-zsh custom plugins dir)
+RUN git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git \
+      ${ZSH_CUSTOM:-/home/${USERNAME}/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting \
+ && git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git \
+      ${ZSH_CUSTOM:-/home/${USERNAME}/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
 
 USER root
+
+# Custom zshrc — replaces the one created by oh-my-zsh
+COPY config/zshrc /home/${USERNAME}/.zshrc
+RUN chown ${USERNAME}:${USERNAME} /home/${USERNAME}/.zshrc
 
 # --- Postgres data dir owned by dev (lives inside the dev-home volume) -----
 # We DO NOT initdb here — the entrypoint does it on first run so the cluster
