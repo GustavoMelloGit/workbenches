@@ -8,6 +8,26 @@ info()  { echo -e "${GREEN}→${NC} $1"; }
 warn()  { echo -e "${YELLOW}!${NC} $1"; }
 error() { echo -e "${RED}✗${NC} $1"; exit 1; }
 
+# Porta em uso? Compatível com macOS (lsof) e Linux (ss ou lsof)
+port_in_use() {
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1
+  elif command -v ss >/dev/null 2>&1; then
+    ss -tlnp | grep -q ":$1 "
+  else
+    nc -z 127.0.0.1 "$1" 2>/dev/null
+  fi
+}
+
+# sed -i portátil: macOS exige '' como argumento extra, Linux não aceita
+sedi() {
+  if [[ "$OSTYPE" == darwin* ]]; then
+    sed -i '' "$@"
+  else
+    sed -i "$@"
+  fi
+}
+
 cd "$(dirname "$0")"
 
 # --- 1. Pré-requisitos ------------------------------------------------------
@@ -31,7 +51,7 @@ else
 
   # Detecta a primeira porta livre a partir de 2222
   SSH_PORT=2222
-  while lsof -iTCP:"$SSH_PORT" -sTCP:LISTEN >/dev/null 2>&1; do
+  while port_in_use "$SSH_PORT"; do
     SSH_PORT=$(( SSH_PORT + 1 ))
   done
   info "Porta SSH alocada: $SSH_PORT"

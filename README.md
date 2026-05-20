@@ -2,10 +2,12 @@
 
 Cada workbench é um container Linux completo com Node, Postgres 16, Redis,
 git, gh e zsh. Você se conecta via Zed por SSH e trabalha como num
-computador dedicado — nada toca o seu Mac.
+computador dedicado — nada toca o seu sistema.
 
 Um único repositório cria quantas workbenches quiser, cada uma com seu
 próprio container, banco e volume isolados.
+
+Compatível com **macOS**, **Linux** e **Windows** (via WSL2 + Docker Desktop).
 
 ---
 
@@ -32,9 +34,11 @@ compartilhada, sem composes paralelos. Isolamento real.
 
 ---
 
-## Setup num Mac novo
+## Setup
 
-Pré-requisitos: Docker Desktop instalado e rodando.
+**Pré-requisitos:** Docker Desktop instalado e rodando.
+- macOS e Linux: direto
+- Windows: requer [WSL2](https://learn.microsoft.com/pt-br/windows/wsl/install) com Docker Desktop integrado ao WSL2
 
 ```bash
 git clone git@github.com:GustavoMelloGit/workbenches.git ~/workbenches
