@@ -111,9 +111,10 @@ sem mexer no docker-compose do projeto.
 |---|---|---|
 | Node | LTS via nvm (troca com `nvm use X`) | `node`, `npm`, `pnpm`, `yarn` |
 | Postgres | 16 | `psql`, `createdb`, `dropdb` |
-| Redis | 7 (debian) | `redis-cli` |
+| Redis | 7 | `redis-cli` |
 | git, gh | latest | — |
 | Shell | zsh + oh-my-zsh | — |
+| rtk | latest | `rtk` |
 
 ### Postgres — atalhos úteis
 

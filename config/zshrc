@@ -9,6 +9,9 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
+# Local binaries (e.g. rtk, pipx installs)
+export PATH="$HOME/.local/bin:$PATH"
+
 # Postgres
 export PGHOST=localhost
 export PGPORT=5432

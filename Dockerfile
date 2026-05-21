@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim
+FROM ubuntu:24.04
 
 # --- Base system ------------------------------------------------------------
 ENV DEBIAN_FRONTEND=noninteractive
@@ -34,10 +34,32 @@ RUN install -d /usr/share/postgresql-common/pgdg \
       postgresql-16 postgresql-client-16 \
  && rm -rf /var/lib/apt/lists/*
 
+# --- RTK CLI ----------------------------------------------------------------
+# Downloads the latest RTK binary to /usr/local/bin based on CPU arch.
+# arm64 uses the gnu variant (needs GLIBC 2.39, satisfied by Ubuntu 24.04).
+# amd64 uses the musl static variant (no libc dependency).
+RUN set -e \
+ && ARCH=$(dpkg --print-architecture) \
+ && case "$ARCH" in \
+      arm64) RTK_ARCH="aarch64-unknown-linux-gnu" ;; \
+      amd64) RTK_ARCH="x86_64-unknown-linux-musl" ;; \
+      *) echo "RTK: unsupported arch $ARCH" >&2; exit 1 ;; \
+    esac \
+ && RTK_VERSION=$(curl -fsSL https://api.github.com/repos/rtk-ai/rtk/releases/latest \
+      | grep '"tag_name"' | cut -d'"' -f4 | sed 's/^v//') \
+ && tmpdir=$(mktemp -d) \
+ && curl -fsSL "https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk-${RTK_ARCH}.tar.gz" \
+      | tar xz -C "$tmpdir" \
+ && install -m 755 "$tmpdir/rtk" /usr/local/bin/rtk \
+ && rm -rf "$tmpdir"
+
 # --- User -------------------------------------------------------------------
 ARG USERNAME=dev
 ARG USER_UID=1000
 ARG USER_GID=1000
+
+# Ubuntu 24.04 ships a pre-created 'ubuntu' user at UID 1000; remove it first.
+RUN userdel -rf ubuntu 2>/dev/null || true
 
 RUN groupadd --gid ${USER_GID} ${USERNAME} \
  && useradd  --uid ${USER_UID} --gid ${USER_GID} -m -s /usr/bin/zsh ${USERNAME} \
